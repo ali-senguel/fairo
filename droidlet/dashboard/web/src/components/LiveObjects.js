@@ -178,7 +178,10 @@ class LiveObjects extends React.Component {
     }
     let j = 0;
     parsed_objects.forEach((obj, i) => {
-      let obj_id = obj.id;
+	if (obj.label === "person") {
+	    return;
+	}
+      let obj_id = obj.id;      
       let label = String(obj_id).concat(obj.label);
       let properties = obj.properties;
       let color = COLORS[i % COLORS.length];

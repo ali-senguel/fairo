@@ -13,6 +13,7 @@ from droidlet.interpreter.robot.objects import DanceMovement
 
 from droidlet.lowlevel.robot_mover_utils import (
     get_move_target_for_point,
+    get_step_target_for_move,
     ARM_HEIGHT,
     get_camera_angles,
 )
@@ -352,3 +353,47 @@ class Explore(Task):
             self.agent.mover.explore()
         else:
             self.finished = self.agent.mover.bot_step()
+
+
+class ExamineDetection(Task):
+    """Examine a detection"""
+    def __init__(self, agent, task_data):
+        super().__init__(agent)
+        self.target = task_data['target']['xyz']
+        self.frontier_center = np.asarray(self.target['xyz'])
+        self.agent = agent
+        self.last_base_pos = None
+        TaskNode(agent.memory, self.memid).update_task(task=self)
+
+    @Task.step_wrapper
+    def step(self):
+        self.interrupted = False
+        self.finished = False
+        logger = logging.getLogger('curious')
+        base_pos = self.agent.mover.get_base_pos_in_canonical_coords()
+        dist = np.linalg.norm(base_pos[:2] - np.asarray([self.frontier_center[0], self.frontier_center[2]]))
+        logger.info(f"Deciding examination, dist = {dist}")
+        d = 1
+        if self.last_base_pos is not None:
+            d = np.linalg.norm(base_pos[:2] - self.last_base_pos[:2])
+            # logger.info(f"Distance moved {d}")
+        if (base_pos != self.last_base_pos).any() and dist > 1 and d > 0:
+            tloc = get_step_target_for_move(base_pos, self.frontier_center)
+            logger.debug(f"get_step_target_for_straight_move \
+                \nx, z, yaw = {base_pos},\
+                \nxf, zf = {self.frontier_center[0], self.frontier_center[2]} \
+                \nx_move, z_move, yaw_move = {tloc}")
+            logging.info(f"Current Pos {base_pos}")
+            logging.info(f"Move Target for Examining {tloc}")
+            logging.info(f"Distance being moved {np.linalg.norm(base_pos[:2]-tloc[:2])}")
+            self.add_child_task(Move(self.agent, {
+                "target": tloc, 
+                "label":str(self.target['eid']) + ':' + self.target['label'] + ' ' + str(np.round(self.target['xyz'],3)) + 'dist ' + str(np.round(dist,3))}))
+            self.last_base_pos = base_pos
+            return
+        else:
+            logger.info(f"Finished Examination")
+            self.finished = self.agent.mover.bot_step()
+        
+    def __repr__(self):
+        return "<ExamineDetection {}>".format(self.target['label'])

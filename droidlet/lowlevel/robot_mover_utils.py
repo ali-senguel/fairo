@@ -1,6 +1,9 @@
 """
 Copyright (c) Facebook, Inc. and its affiliates.
 """
+# FIXME EXAMINE HACK
+import math
+
 import numpy as np
 import logging
 from scipy.spatial.transform import Rotation
@@ -110,3 +113,34 @@ def xyz_pyrobot_to_canonical_coords(xyz):
 def xyz_canonical_coords_to_pyrobot_coords(xyz):
     """converts 3D coords from canonical to pyrobot coords."""
     return xyz @ np.linalg.inv(pyrobot_to_canonical_frame)
+
+
+# FIXME EXAMINE HACK
+def get_step_target_for_move(base_pos, target, step_size=0.1):
+    """
+    Heuristic to get step target of step_size for going to from base_pos to target. 
+    Args:
+        base_pos ([x,z,yaw]): robot base in canonical coords
+        target ([x,y,z]): point target in canonical coords
+    
+    Returns:
+        move_target ([x,z,yaw]): robot base move target in canonical coords 
+    """
+
+    dx = target[0] - base_pos[0]
+    dz = target[2] - base_pos[1]
+
+    if dx == 0: # vertical line 
+        theta = math.radians(90)
+    else:
+        theta = math.atan(abs(dz/dx))
+    
+    signx = 1 if dx >= 0 else -1
+    signz = 1 if dz >= 0 else -1
+    
+    targetx = base_pos[0] + signx * step_size * math.cos(theta)
+    targetz = base_pos[1] + signz * step_size * math.sin(theta)
+
+    yaw, _ = get_camera_angles([targetx, CAMERA_HEIGHT, targetz], target)
+    
+    return [targetx, targetz, yaw] 
