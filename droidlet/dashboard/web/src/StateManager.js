@@ -870,8 +870,6 @@ class StateManager {
     }
     let rgb = new Image();
     rgb.src = "data:image/webp;base64," + res.image.rgb;
-    console.log(res.objects);
-      console.log("In objects");
 
     // Get rid of empty masks
     let i = 0;
@@ -894,7 +892,6 @@ class StateManager {
       o["type"] = "detector";
     });
 
-    console.log(this.updateObjects)
     // If new objects, update state and feed
     if (
       this.updateObjects[1] // Frame after rgb changes
@@ -922,7 +919,7 @@ class StateManager {
     if (this.updateObjects[0]) {
       // Current frame is when rgb changes. This is needed to ensure correctness
       this.updateObjects[1] = true;
-	console.lo("HERE");
+      console.lo("HERE");
     }
     if (this.checkRunLabelProp()) {
       this.startLabelPropagation();
