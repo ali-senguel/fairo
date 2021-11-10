@@ -145,7 +145,6 @@ class Perception:
             "depthMin": serialized_image["depth_min"],
         })
 
-        print(serialized_objects)
         sio.emit("objects", {
             "image": serialized_object_image,
             "objects": serialized_objects,
