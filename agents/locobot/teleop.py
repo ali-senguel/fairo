@@ -240,14 +240,13 @@ if __name__ == "__main__":
     
     while True:
         counter += 1
+        base_state = mover.get_base_pos_in_canonical_coords()
         if (time.time() - start_time) > fps_freq :
             print("FPS: ", counter / (time.time() - start_time))
+            print("base_state: ", base_state)
             counter = 0
             start_time = time.time()
 
-        base_state = mover.get_base_pos_in_canonical_coords()
-        print("base_state: ", base_state)
-        print("rgb_depth: ", mover.get_rgb_depth())
         sio.emit("image_settings", log_settings)
         resolution = log_settings["image_resolution"]
         quality = log_settings["image_quality"]
