@@ -51,6 +51,8 @@ class DialogueObjectMapper(object):
         ###############################################
         # FIXME !!! EXPLORE HACK!!
         ###############################################
+        if not chat_status:
+            return None
        
         if PREFIX in chat:
             print(chat)
@@ -70,6 +72,8 @@ class DialogueObjectMapper(object):
 
             if target_obj is None:
                 raise RuntimeError("target obj not found")
+            self.dialogue_manager.memory.untag(chat_memid, "uninterpreted")
+            
             return {"forced_examine": target_obj}
 
 
