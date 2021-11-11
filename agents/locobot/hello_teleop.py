@@ -174,7 +174,7 @@ def test_command(sid, commands, data={"yaw": 0.1, "velocity": 0.1, "move": 0.3},
             mover.bot.set_tilt(mover.bot.get_tilt().value - yaw).value
             sync()
         elif command == "LOG_DATA":
-            mover.log_data(float(value)) # in seconds
+            mover.log_data_start(float(value)) # in seconds
         elif command == "STOP_ROBOT":
             mover.stop()
         elif command == "UNSTOP_ROBOT":
