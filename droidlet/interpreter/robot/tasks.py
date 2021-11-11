@@ -409,7 +409,9 @@ class ExamineDetection(Task):
             mover.move_absolute(move_target, blocking=False)
             print("[EXAMINE] Moving to ", move_target)
             self.command_sent = True
-            time.sleep(1)            
+            time.sleep(1)
+            mover.log_data_start(45) # by default, assume that examining will take no more than 45 seconds
+
         print("[EXAMINE] re-looking at target", target)
         mover.look_at(target)
 
@@ -417,7 +419,7 @@ class ExamineDetection(Task):
         print("[EXAMINE] distance to destination: ", dist)
         if dist < 0.1:
             print("[EXAMINE] FINSIHED TASK", self.memid)
-
+            mover.log_data_stop()
             self.finished = True
         
     def __repr__(self):
