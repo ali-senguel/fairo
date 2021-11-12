@@ -90,7 +90,10 @@ class ObjectDeduplicator(AbstractHandler):
                 # FIXME pick best match?
                 if self.is_match(score.item(), dist):
                     is_novel = False
+                    print("Instance almost setting current object eid to ", previous_object.eid)
                     current_object.eid = previous_object.eid
+                    print("Instance setting current object eid to ", previous_object.eid)
+                    break
         logging.info("world object {}, is_novel {}".format(current_object.label, is_novel))
         return is_novel
 
@@ -104,8 +107,9 @@ class ObjectDeduplicator(AbstractHandler):
             previous_objects (list[WorldObject]): a list of all previous WorldObjects ever detected
         """
         logging.info("In ObjectDeduplicationHandler ... ")
-        if self.object_id_counter <= len(previous_objects): # Ensure unique eids
-            self.object_id_counter = len(previous_objects) + 1
+        # if self.object_id_counter <= len(previous_objects): # Ensure unique eids
+        #     self.object_id_counter = len(previous_objects) + 1
+        self.object_id_counter = self.object_id_counter + 1
         new_objects = []
         updated_objects = []
         for current_object in current_objects:
@@ -115,11 +119,17 @@ class ObjectDeduplicator(AbstractHandler):
                 new_objects.append(current_object)
 
                 logging.info(
-                    f"Instance ({current_object.label}) is at location: "
+                    f"Instance ({current_object.label}) {current_object.eid} is at location: "
                     f"({np.around(np.array(current_object.xyz), 2)}),"
                     f" Center:({current_object.center})"
                 )
             else:
-                updated_objects.append(current_object)
-
+                exists = False
+                for u in updated_objects:
+                    if u.eid == current_object.eid:
+                        exists = True
+                if exists == False:
+                    updated_objects.append(current_object)
+                print("Instance Updated objects", [u.eid for u in updated_objects])
+        
         return new_objects, updated_objects
