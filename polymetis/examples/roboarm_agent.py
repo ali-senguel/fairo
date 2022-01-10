@@ -14,6 +14,11 @@ import numpy as np
 from PIL import Image
 import base64
 import cv2
+import sophus as sp
+import torch
+from scipy.spatial.transform import Rotation as R
+#import torchcontrol as toco
+#from torchcontrol.transform import Rotation as R
 
 import matplotlib.pyplot as plt
 import imageio
@@ -44,6 +49,8 @@ from droidlet.event import sio
 from droidlet.shared_data_structs import RGBDepth
 from droidlet.lowlevel.robot_mover_utils import xyz_canonical_coords_to_pyrobot_coords
 
+from oculus_reader import OculusReader
+
 faulthandler.register(signal.SIGUSR1)
 
 random.seed(0)
@@ -56,6 +63,11 @@ logging.getLogger().handlers.clear()
 Pyro4.config.SERIALIZER = "serpent"
 Pyro4.config.SERIALIZERS_ACCEPTED.add("serpent")
 Pyro4.config.PICKLE_PROTOCOL_VERSION = 4
+
+# teleop control frequency
+UPDATE_HZ = 60
+# low pass filter cutoff frequency
+LPF_CUTOFF_HZ = 15
 
 
 class RoboarmAgent(DroidletAgent):
@@ -94,8 +106,13 @@ class RoboarmAgent(DroidletAgent):
         #self.simEnv = Pyro4.Proxy(uri)
         self.simEnv = Pyro4.core.Proxy('PYRO:remoteEnv@' + "127.0.1.1" + ':9000')
         self.sim_image = []
-        
 
+        self.reader = OculusReader()
+        self.reader.run()
+        
+        self.vr_pose_filtered = None
+        tmp = 2 * np.pi * LPF_CUTOFF_HZ / UPDATE_HZ
+        self.lpf_alpha = tmp / (tmp + 1)
         
         # list of (prob, default function) pairs
         if self.backend == 'habitat':
@@ -303,7 +320,39 @@ class RoboarmAgent(DroidletAgent):
         time.sleep(0)
         rgb = self.update_sim_image()
         sio.emit("updateImage", rgb)
+        is_active,pos, grasp_state = self.get_state()
+        if is_active:
+            print(pos)
+
+    def interpolate_pose(pose1, pose2, pct):
+        pose_diff = pose1.inverse() * pose2
+        return pose1 * sp.SE3.exp(pct * pose_diff.log())        
         
+    def get_state (self):
+        transforms, buttons = self.reader.get_transformations_and_buttons()
+        if transforms:
+            is_active = buttons["rightGrip"][0] > 0.9
+            grasp_state = buttons["B"]
+            pose_matrix = np.linalg.pinv(transforms["l"]) @ transforms["r"]
+        else:
+            is_active = False
+            grasp_state = 0
+            pose_matrix = np.eye(4)
+            self.vr_pose_filtered = None
+ 
+        # Create transform (hack to prevent unorthodox matrices)
+        r = R.from_matrix(torch.Tensor(pose_matrix[:3, :3]))
+        vr_pose_curr = sp.SE3(sp.SO3.exp(r.as_rotvec()).matrix(), pose_matrix[:3, -1])
+        # Filter transform
+        if self.vr_pose_filtered is None:
+            self.vr_pose_filtered = vr_pose_curr
+        else:
+            #self.vr_pose_filtered = self.interpolate_pose(self.vr_pose_filtered, vr_pose_curr, self.lpf_alpha)
+            self.vr_pose_filtered = vr_pose_curr
+        
+        pose = self.vr_pose_filtered 
+        return is_active, pose, grasp_state
+
 
     def task_step(self, sleep_time=0.0):
         super().task_step(sleep_time=sleep_time)

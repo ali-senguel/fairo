@@ -9,12 +9,14 @@ Config.set('graphics', 'height', '600')
 import torch
 from polymetis import RobotInterface
 
+
 Builder.load_file('design.kv')
 
 class RobotControlScreen(Screen):
     
     robot = RobotInterface ( ip_address = "localhost")
     current_joint = torch.Tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
 
     def connect(self):
         self.ids.robot_status.text = "Connecting"
