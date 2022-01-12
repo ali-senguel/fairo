@@ -182,8 +182,7 @@ class RoboarmAgent(DroidletAgent):
                     pos , quat= np.array(self.mover.get_ee_pos())
                     print (type(pos))
                     print (pos)
-                    movement_values["ee_pos"] = pos
-                    sio.emit("updatePosState", movement_values)
+                    sio.emit("updatePosState", pos)
                 elif command == "GET_IMAGE":
                     rgb = self.update_sim_image()
                     sio.emit("updateImage", rgb)
@@ -327,8 +326,11 @@ class RoboarmAgent(DroidletAgent):
         is_active,pos, ee_pos, grasp_state = self.get_state()
         if is_active:
             print(pos)
-            print (ee_pos)
             print (grasp_state)
+            if ee_pos is not None:
+                print (ee_pos)
+                sio.emit("updatePosState", ee_pos.tolist())
+                self.mover.go_to_ee_pos(ee_pos.tolist())
 
     def interpolate_pose(pose1, pose2, pct):
         pose_diff = pose1.inverse() * pose2
@@ -353,7 +355,8 @@ class RoboarmAgent(DroidletAgent):
 
 
     def get_state (self):
-        transforms, buttons = self.reader.get_transformations_and_buttons()
+        transforms, buttons = self.reader.get_transformations_and_buttons() 
+        init_val = None
         if transforms:
             is_active = buttons["rightGrip"][0] > 0.9
             grasp_state = buttons["B"]
@@ -377,9 +380,9 @@ class RoboarmAgent(DroidletAgent):
             print(self.init_pos)
             self.is_init_done = True
         if self.is_init_done:
-            print(self.init_pos-vr_pose_curr.translation())
+            init_val = self.init_pos-vr_pose_curr.translation()
 
-        return is_active, pose, rob_curr_pos, grasp_state
+        return is_active, pose, init_val, grasp_state
 
 
     def task_step(self, sleep_time=0.0):

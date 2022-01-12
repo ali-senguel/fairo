@@ -82,6 +82,8 @@ class StateManager {
 
     this.updateImage = this.updateImage.bind(this);
 
+    this.updatePosState = this.updatePosState.bind(this);
+
     this.updateStateManagerMemory = this.updateStateManagerMemory.bind(this);
     this.keyHandler = this.keyHandler.bind(this);
     this.updateVoxelWorld = this.updateVoxelWorld.bind(this);
@@ -284,9 +286,15 @@ class StateManager {
      * to be what's on the server and force re-renders
      * components.
      */
-    ee_pos = data.movement_values["ee_pos"];
-    console.log(ee_pos);
-    this.roboArmState.ee_pos = data.movement_values["ee_pos"];
+    let eePos = data;
+    this.refs.forEach((ref) => {
+      if (ref instanceof FrankaArmMover) {
+        console.log(eePos);
+        ref.setState({
+          ee_pos: eePos,
+        });
+      }
+    });
   }
 
   updateStateManagerMemory(data) {
@@ -517,8 +525,8 @@ class StateManager {
 
     //img.src = buff;
     this.refs.forEach((ref) => {
-      console.log("Data sent", data);
-      console.log("Data image is", img);
+      //console.log("Data sent", data);
+      //console.log("Data image is", img);
       if (ref instanceof FrankaArmMover) {
         ref.setState({
           image: img,

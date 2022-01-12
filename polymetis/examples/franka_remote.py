@@ -55,10 +55,7 @@ class RemoteFranka(object):
         # Command robot to ee pose (move ee downwards)
         # note: can also be done with robot.move_ee_xyz
         ee_pos, ee_quat = self.robot.pose_ee()
-        axis =torch.Tensor([0.0, 0.0, -1])
-        const = float(pos)
-        #print (const)
-        delta_ee_pos_desired = torch.mul(const,axis)
+        delta_ee_pos_desired = torch.Tensor(pos)
         #print(delta_ee_pos_desired)
         ee_pos_desired = ee_pos + delta_ee_pos_desired
         self.robot.set_ee_pose( position=ee_pos_desired, orientation=None, time_to_go=2.0)
