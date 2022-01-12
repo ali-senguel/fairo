@@ -257,10 +257,10 @@ class StateManager {
     socket.on("setLastChatActionDict", this.setLastChatActionDict);
     socket.on("memoryState", this.processMemoryState);
     socket.on("updateState", this.updateStateManagerMemory);
-    socket.on ("updatePosState", this.updatePosState)
+    socket.on("updatePosState", this.updatePosState);
     socket.on("updateAgentType", this.updateAgentType);
 
-    socket.on("updateImage", this.updateImage)
+    socket.on("updateImage", this.updateImage);
 
     socket.on("rgb", this.processRGB);
     socket.on("depth", this.processDepth);
@@ -284,8 +284,9 @@ class StateManager {
      * to be what's on the server and force re-renders
      * components.
      */
+    ee_pos = data.movement_values["ee_pos"];
+    console.log(ee_pos);
     this.roboArmState.ee_pos = data.movement_values["ee_pos"];
-
   }
 
   updateStateManagerMemory(data) {
@@ -470,7 +471,7 @@ class StateManager {
         }
         if (k === 61) {
           commands.push("GET_IMAGE");
-        }             
+        }
       }
     }
     if (commands.length > 0) {
@@ -480,7 +481,7 @@ class StateManager {
           movementValues = ref.state;
         }
       });
- 
+
       this.socket.emit("movement command", commands, movementValues);
 
       // Reset keys to prevent duplicate commands
@@ -516,13 +517,12 @@ class StateManager {
 
     //img.src = buff;
     this.refs.forEach((ref) => {
-      console.log("Data sent",data);
+      console.log("Data sent", data);
       console.log("Data image is", img);
       if (ref instanceof FrankaArmMover) {
         ref.setState({
           image: img,
-        }
-        );
+        });
       }
     });
   }

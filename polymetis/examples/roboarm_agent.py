@@ -110,7 +110,8 @@ class RoboarmAgent(DroidletAgent):
         self.reader = OculusReader()
         self.reader.run()
         
-        self.vr_pose_filtered = None
+        self.init_pos = None
+        self.is_init_done = False
         tmp = 2 * np.pi * LPF_CUTOFF_HZ / UPDATE_HZ
         self.lpf_alpha = tmp / (tmp + 1)
         
@@ -178,8 +179,11 @@ class RoboarmAgent(DroidletAgent):
                 #elif command == "GO_HOME":
                     #self.mover.go_home()                       
                 elif command == "GET_POS":
-                    pos = self.mover.get_ee_pos()
+                    pos , quat= np.array(self.mover.get_ee_pos())
+                    print (type(pos))
+                    print (pos)
                     movement_values["ee_pos"] = pos
+                    sio.emit("updatePosState", movement_values)
                 elif command == "GET_IMAGE":
                     rgb = self.update_sim_image()
                     sio.emit("updateImage", rgb)
@@ -320,38 +324,62 @@ class RoboarmAgent(DroidletAgent):
         time.sleep(0)
         rgb = self.update_sim_image()
         sio.emit("updateImage", rgb)
-        is_active,pos, grasp_state = self.get_state()
+        is_active,pos, ee_pos, grasp_state = self.get_state()
         if is_active:
             print(pos)
+            print (ee_pos)
+            print (grasp_state)
 
     def interpolate_pose(pose1, pose2, pct):
         pose_diff = pose1.inverse() * pose2
         return pose1 * sp.SE3.exp(pct * pose_diff.log())        
-        
+
+    def get_ee_pose(self):
+        pos_curr, quat_curr = np.array(self.mover.get_ee_pos())
+        rotvec = R.from_quat(quat_curr).as_rotvec()
+        return sp.SE3(sp.SO3.exp(rotvec).matrix(), pos_curr)
+        #return pos_curr
+
+    def update_ee_pose(self, pose_des):
+        # Compute desired joint pose
+        q_curr = self.mover.get_joint_angles()
+        pose_curr = self.get_ee_pose()
+
+        J = self.mover.robot_model.compute_jacobian(q_curr)
+        J_pinv = torch.pinverse(J)
+
+        q_des = q_curr + J_pinv @ torch.Tensor((pose_des * pose_curr.inverse()).log())
+        print (q_des)
+
+
     def get_state (self):
         transforms, buttons = self.reader.get_transformations_and_buttons()
         if transforms:
             is_active = buttons["rightGrip"][0] > 0.9
             grasp_state = buttons["B"]
-            pose_matrix = np.linalg.pinv(transforms["l"]) @ transforms["r"]
+            #pose_matrix = np.linalg.pinv(transforms["l"]) @ transforms["r"]
+            pose_matrix = transforms["r"]
+            rob_curr_pos = self.get_ee_pose()
+            #print(rob_curr_pos)
         else:
             is_active = False
             grasp_state = 0
             pose_matrix = np.eye(4)
-            self.vr_pose_filtered = None
+            rob_curr_pos = np.zeros(3)
+            self.init_pos = None
  
         # Create transform (hack to prevent unorthodox matrices)
         r = R.from_matrix(torch.Tensor(pose_matrix[:3, :3]))
-        vr_pose_curr = sp.SE3(sp.SO3.exp(r.as_rotvec()).matrix(), pose_matrix[:3, -1])
-        # Filter transform
-        if self.vr_pose_filtered is None:
-            self.vr_pose_filtered = vr_pose_curr
-        else:
-            #self.vr_pose_filtered = self.interpolate_pose(self.vr_pose_filtered, vr_pose_curr, self.lpf_alpha)
-            self.vr_pose_filtered = vr_pose_curr
-        
-        pose = self.vr_pose_filtered 
-        return is_active, pose, grasp_state
+        vr_pose_curr = sp.SE3(sp.SO3.exp(r.as_rotvec()).matrix(), pose_matrix[:3, -1])        
+        pose = vr_pose_curr
+        if grasp_state:
+            self.init_pos = pose.translation()
+            print(self.init_pos)
+            self.is_init_done = True
+        if self.is_init_done:
+            print(self.init_pos-vr_pose_curr.translation())
+
+        return is_active, pose, rob_curr_pos, grasp_state
 
 
     def task_step(self, sleep_time=0.0):

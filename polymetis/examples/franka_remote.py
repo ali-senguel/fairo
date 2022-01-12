@@ -24,19 +24,19 @@ class RemoteFranka(object):
         # Get joint positions
         joint_pos = self.robot.get_joint_angles()
         if joint == 1:
-        	delta_joint_pos_desired = torch.Tensor([0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])	
+            delta_joint_pos_desired = torch.Tensor([0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])	
         elif joint == 2:	
-        	delta_joint_pos_desired = torch.Tensor([0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0])
+            delta_joint_pos_desired = torch.Tensor([0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0])
         elif joint == 3:	
-        	delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0])
+            delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0])
         elif joint == 4:	
-        	delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0])
+            delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0])
         elif joint == 5:	
-        	delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0])
+            delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0])
         elif joint == 6:	
-        	delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0])
+            delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0])
         else:	
-        	delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            delta_joint_pos_desired = torch.Tensor([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         	        	        	        	        	        	
         joint_pos_desired = joint_pos + delta_joint_pos_desired
         state_log = self.robot.set_joint_positions(joint_pos_desired, time_to_go=(4.0-vel))  
@@ -47,7 +47,8 @@ class RemoteFranka(object):
         # Get ee pose
         ee_pos, ee_quat = self.robot.pose_ee()
         pos = ee_pos.numpy()
-        return pos
+        quat = ee_quat.numpy()
+        return pos.tolist(), quat.tolist()
 
     def go_to_ee_pos(self, pos):
 
