@@ -111,6 +111,8 @@ class RoboarmAgent(DroidletAgent):
         self.reader.run()
         
         self.init_pos = None
+        self.home_pos = None
+        self.home_quat = None
         self.is_init_done = False
         tmp = 2 * np.pi * LPF_CUTOFF_HZ / UPDATE_HZ
         self.lpf_alpha = tmp / (tmp + 1)
@@ -172,8 +174,9 @@ class RoboarmAgent(DroidletAgent):
                     self.mover.move(6,vel) 
                 elif command == "GO_HOME":
                     self.mover.go_home()
-
-
+                    self.home_pos, self.home_quat = self.mover.get_ee_pos()
+                    print (f"Home Pos: {self.home_pos}")
+                
 
                     #print (self.env.get_state())
                 #elif command == "GO_HOME":
@@ -186,7 +189,6 @@ class RoboarmAgent(DroidletAgent):
                 elif command == "GET_IMAGE":
                     rgb = self.update_sim_image()
                     sio.emit("updateImage", rgb)
-
 
                     ##arrayList = self.simEnv.get_image()
                     ##npArray = np.asarray(arrayList)
@@ -325,12 +327,14 @@ class RoboarmAgent(DroidletAgent):
         sio.emit("updateImage", rgb)
         is_active,pos, ee_pos, grasp_state = self.get_state()
         if is_active:
-            print(pos)
-            print (grasp_state)
+            
             if ee_pos is not None:
-                print (ee_pos)
-                sio.emit("updatePosState", ee_pos.tolist())
-                self.mover.go_to_ee_pos(ee_pos.tolist())
+                print(f"EE pos {ee_pos}")
+                #self.mover.go_to_ee_pos(ee_pos.tolist())
+                end_pos = self.home_pos + ee_pos
+                print(f"End Effector pos {end_pos}")
+                sio.emit("updatePosState", end_pos.tolist())
+                self.mover.set_ee_pos(end_pos.tolist()) 
 
     def interpolate_pose(pose1, pose2, pct):
         pose_diff = pose1.inverse() * pose2
@@ -357,9 +361,11 @@ class RoboarmAgent(DroidletAgent):
     def get_state (self):
         transforms, buttons = self.reader.get_transformations_and_buttons() 
         init_val = None
+        send_val = None
         if transforms:
             is_active = buttons["rightGrip"][0] > 0.9
             grasp_state = buttons["B"]
+            send_state = buttons["A"]
             #pose_matrix = np.linalg.pinv(transforms["l"]) @ transforms["r"]
             pose_matrix = transforms["r"]
             rob_curr_pos = self.get_ee_pose()
@@ -367,6 +373,7 @@ class RoboarmAgent(DroidletAgent):
         else:
             is_active = False
             grasp_state = 0
+            send_state = 0
             pose_matrix = np.eye(4)
             rob_curr_pos = np.zeros(3)
             self.init_pos = None
@@ -377,12 +384,17 @@ class RoboarmAgent(DroidletAgent):
         pose = vr_pose_curr
         if grasp_state:
             self.init_pos = pose.translation()
-            print(self.init_pos)
+            #print(self.init_pos)
             self.is_init_done = True
         if self.is_init_done:
             init_val = self.init_pos-vr_pose_curr.translation()
+            self.is_init_done = False
+            print (f"Intial value {init_val}")
+        if send_state:
+            send_val = self.init_pos-vr_pose_curr.translation()
+            print (f"Send value {send_val}")
 
-        return is_active, pose, init_val, grasp_state
+        return is_active, pose, send_val, grasp_state
 
 
     def task_step(self, sleep_time=0.0):

@@ -59,7 +59,12 @@ class RemoteFranka(object):
         #print(delta_ee_pos_desired)
         ee_pos_desired = ee_pos + delta_ee_pos_desired
         self.robot.set_ee_pose( position=ee_pos_desired, orientation=None, time_to_go=2.0)
-    
+
+    def set_ee_pos (self,pos):
+        ee_pos_desired = torch.Tensor(pos)
+        self.robot.set_ee_pose( position=ee_pos_desired, orientation=None, time_to_go=2.0)
+
+
     def print_franka(self):
         print ("Connected to Franka")
 
